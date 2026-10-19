@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
@@ -22,6 +23,12 @@ internal sealed partial class AuditWriter(
     TimeProvider timeProvider,
     ILogger<AuditWriter> logger) : BackgroundService, IAuditLog
 {
+    // Enums como texto ("shutdown", não 4): a auditoria é lida por pessoas e exportada em CSV.
+    private static readonly JsonSerializerOptions TargetJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+    };
+
     public const int Capacity = 10_000;
     private const int MaxBatchSize = 200;
 
@@ -36,7 +43,7 @@ internal sealed partial class AuditWriter(
             Source = record.Source,
             DeviceId = record.DeviceId,
             Action = record.Action,
-            TargetJson = record.Target is null ? null : JsonSerializer.Serialize(record.Target),
+            TargetJson = record.Target is null ? null : JsonSerializer.Serialize(record.Target, TargetJsonOptions),
             Result = record.Result,
             ErrorCode = record.ErrorCode,
             LocalConfirmation = record.LocalConfirmation,

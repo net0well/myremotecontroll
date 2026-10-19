@@ -64,11 +64,9 @@ Future<DeviceConfirmation> confirmWithDevice(WidgetRef ref, String reason) async
     return (confirmed: true, authenticated: false);
   }
 
-  final authenticator = ref.read(deviceAuthenticatorProvider);
-  if (!await authenticator.isAvailable()) {
-    return (confirmed: true, authenticated: false);
-  }
-
-  final ok = await authenticator.authenticate(reason);
-  return (confirmed: ok, authenticated: ok);
+  return switch (await ref.read(deviceAuthenticatorProvider).authenticate(reason)) {
+    DeviceAuthResult.success => (confirmed: true, authenticated: true),
+    DeviceAuthResult.unavailable => (confirmed: true, authenticated: false),
+    DeviceAuthResult.failed => (confirmed: false, authenticated: false),
+  };
 }

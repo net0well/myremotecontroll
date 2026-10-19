@@ -44,6 +44,9 @@ abstract final class ErrorCodes {
   static const powerHibernateUnavailable = 'power.hibernateUnavailable';
   static const powerSleepUnavailable = 'power.sleepUnavailable';
   static const powerNothingToCancel = 'power.nothingToCancel';
+
+  /// Só do app: a chamada não chegou ao agente (conexão caiu no meio).
+  static const connectionLost = 'connection.lost';
 }
 
 /// `GET /api/v1/info`.

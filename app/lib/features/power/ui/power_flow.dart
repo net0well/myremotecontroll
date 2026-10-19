@@ -111,6 +111,8 @@ Future<void> _send(BuildContext context, WidgetRef ref, PowerRequest request, {b
       _snack(context, l10n.powerHibernateUnavailable);
     case ErrorCodes.authForbidden:
       _snack(context, l10n.errorForbidden);
+    case ErrorCodes.connectionLost:
+      _snack(context, l10n.errorNetwork);
     default:
       _snack(context, result.errorMessage?.isNotEmpty == true ? result.errorMessage! : l10n.errorUnknown);
   }
@@ -148,7 +150,7 @@ Future<void> cancelPowerAction(BuildContext context, WidgetRef ref) async {
     return;
   }
 
-  if (result == null) {
+  if (result == null || result.errorCode == ErrorCodes.connectionLost) {
     _snack(context, l10n.errorNetwork);
   } else if (result.ok) {
     await HapticFeedback.lightImpact();
@@ -322,16 +324,20 @@ class _ShutdownWarning extends StatelessWidget {
           Wrap(
             spacing: AppSpacing.sm,
             children: [
-              OutlinedButton(
-                key: const Key('useRestart'),
-                onPressed: () => onSwitch(PowerActionKind.restart),
-                child: Text(l10n.powerUseRestart),
-              ),
-              OutlinedButton(
-                key: const Key('useLock'),
-                onPressed: () => onSwitch(PowerActionKind.lock),
-                child: Text(l10n.powerUseLock),
-              ),
+              // Na cor do texto do aviso: o azul padrão some sobre o vermelho.
+              for (final (key, action, label) in [
+                (const Key('useRestart'), PowerActionKind.restart, l10n.powerUseRestart),
+                (const Key('useLock'), PowerActionKind.lock, l10n.powerUseLock),
+              ])
+                OutlinedButton(
+                  key: key,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: scheme.onErrorContainer,
+                    side: BorderSide(color: scheme.onErrorContainer.withValues(alpha: 0.7)),
+                  ),
+                  onPressed: () => onSwitch(action),
+                  child: Text(label),
+                ),
             ],
           ),
         ],

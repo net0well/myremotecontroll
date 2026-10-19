@@ -154,12 +154,13 @@ class FakeAuthenticator implements DeviceAuthenticator {
   int prompts = 0;
 
   @override
-  Future<bool> isAvailable() async => available;
+  Future<DeviceAuthResult> authenticate(String reason) async {
+    if (!available) {
+      return DeviceAuthResult.unavailable;
+    }
 
-  @override
-  Future<bool> authenticate(String reason) async {
     prompts++;
-    return accept;
+    return accept ? DeviceAuthResult.success : DeviceAuthResult.failed;
   }
 }
 

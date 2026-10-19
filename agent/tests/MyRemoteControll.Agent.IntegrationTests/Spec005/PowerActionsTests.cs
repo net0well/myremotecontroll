@@ -55,6 +55,7 @@ public sealed class PowerActionsTests
         await Eventually.TrueAsync(() => scenario.Audit().Any(a => a.Action == PowerService.ExecuteAction), "execução auditada");
         var request = scenario.Audit().Single(a => a.Action == "power.shutdown");
         Assert.Equal(AuditResult.Success, request.Result);
+        Assert.Contains("\"action\":\"shutdown\"", scenario.Audit().Single(a => a.Action == PowerService.ExecuteAction).TargetJson, StringComparison.Ordinal);
         Assert.True(request.LocalConfirmation);
         Assert.Equal(admin.DeviceId, request.DeviceId);
     }

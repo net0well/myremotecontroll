@@ -45,6 +45,10 @@ dependencies:
   mobile_scanner: ^7.4.2
   riverpod_annotation: ^4.0.7
   shared_preferences: ^2.5.6
+  # 2.5.0 (Pigeon JNI, 2026-10-17) não traz regras do R8: no build release o R8 renomeia os métodos chamados por JNI
+  # e o app trava na abertura (NoSuchMethodError em SharedPreferencesAsyncApiRegistrar.getAll). Voltar para a última
+  # versão quando sair uma correção; conferir abrindo o APK release no emulador.
+  shared_preferences_android: ">=2.4.28 <2.5.0"
   signalr_netcore: ^1.4.4
 
   # The following adds the Cupertino Icons font to your application.
@@ -62,6 +66,7 @@ dev_dependencies:
   riverpod_generator: ^4.0.9
   build_runner: ^2.16.2
   riverpod_lint: ^3.1.9
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -105,3 +110,14 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Ícone do app: gerado por tools/icon/generate_app_icon.py; aplicar com `dart run flutter_launcher_icons`.
+flutter_launcher_icons:
+  image_path: "assets/icon/app_icon.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  min_sdk_android: 26
+  adaptive_icon_background: "assets/icon/app_icon_background.png"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  adaptive_icon_monochrome: "assets/icon/app_icon_monochrome.png"

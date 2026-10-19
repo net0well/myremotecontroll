@@ -86,9 +86,19 @@ class SignalRAgentHub implements AgentHub {
     return controller;
   }).stream;
 
+  /// Conexão caída no meio da chamada vira `connection.lost`, como qualquer outro erro: quem chama decide pela
+  /// mensagem, sem exceção escapando de um botão.
   @override
-  Future<HubResult<T>> invoke<T>(String method, List<Object> arguments, T Function(Object? data) parse) async =>
-      HubResult.fromJson(await _connection.invoke(method, args: arguments), parse);
+  Future<HubResult<T>> invoke<T>(String method, List<Object> arguments, T Function(Object? data) parse) async {
+    final Object? response;
+    try {
+      response = await _connection.invoke(method, args: arguments);
+    } on Exception {
+      return const HubResult.failure(ErrorCodes.connectionLost, 'Sem conexão com o PC.');
+    }
+
+    return HubResult.fromJson(response, parse);
+  }
 }
 
 /// Sem reconexão do `signalr_netcore`: ele usa uma política padrão mesmo sem `withAutomaticReconnect` e só avisaria a

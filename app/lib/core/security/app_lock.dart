@@ -6,11 +6,20 @@ import '../providers.dart';
 
 part 'app_lock.g.dart';
 
+/// Resultado de pedir biometria/PIN ao aparelho.
+enum DeviceAuthResult {
+  success,
+
+  /// Recusada, cancelada ou bloqueada por tentativas: a ação não segue.
+  failed,
+
+  /// O aparelho não tem biometria nem PIN configurados: não há como autenticar (a spec 004 libera nesse caso).
+  unavailable,
+}
+
 /// Biometria ou PIN do aparelho. A implementação real usa o `local_auth`; os testes usam uma falsa.
 abstract interface class DeviceAuthenticator {
-  Future<bool> isAvailable();
-
-  Future<bool> authenticate(String reason);
+  Future<DeviceAuthResult> authenticate(String reason);
 }
 
 class LocalAuthAuthenticator implements DeviceAuthenticator {
@@ -18,13 +27,26 @@ class LocalAuthAuthenticator implements DeviceAuthenticator {
 
   final LocalAuthentication _localAuth;
 
+  /// Aceita biometria ou o PIN/padrão do aparelho (não só biometria), como pede a spec 004. O `local_auth` 3 lança
+  /// exceção quando não há credencial e quando o usuário cancela; aqui isso vira um resultado.
   @override
-  Future<bool> isAvailable() => _localAuth.isDeviceSupported();
+  Future<DeviceAuthResult> authenticate(String reason) async {
+    if (!await _localAuth.isDeviceSupported()) {
+      return DeviceAuthResult.unavailable;
+    }
 
-  /// Aceita biometria ou o PIN/padrão do aparelho (não só biometria), como pede a spec 004.
-  @override
-  Future<bool> authenticate(String reason) =>
-      _localAuth.authenticate(localizedReason: reason, persistAcrossBackgrounding: true);
+    try {
+      final ok = await _localAuth.authenticate(localizedReason: reason, persistAcrossBackgrounding: true);
+      return ok ? DeviceAuthResult.success : DeviceAuthResult.failed;
+    } on LocalAuthException catch (error) {
+      return switch (error.code) {
+        LocalAuthExceptionCode.noCredentialsSet ||
+        LocalAuthExceptionCode.noBiometricsEnrolled ||
+        LocalAuthExceptionCode.noBiometricHardware => DeviceAuthResult.unavailable,
+        _ => DeviceAuthResult.failed,
+      };
+    }
+  }
 }
 
 @Riverpod(keepAlive: true)
@@ -59,12 +81,15 @@ class AppLock extends _$AppLock {
 
   /// Pede biometria/PIN. Sem nenhum dos dois configurado no aparelho, o bloqueio não tem como funcionar e é liberado.
   Future<bool> unlock(String reason) async {
-    final authenticator = ref.read(deviceAuthenticatorProvider);
-    if (!await authenticator.isAvailable() || await authenticator.authenticate(reason)) {
-      state = AppLockStatus.unlocked;
-      return true;
+    final result = await ref.read(deviceAuthenticatorProvider).authenticate(reason);
+    if (result == DeviceAuthResult.failed) {
+      return false;
     }
 
-    return false;
+    if (ref.mounted) {
+      state = AppLockStatus.unlocked;
+    }
+
+    return true;
   }
 }

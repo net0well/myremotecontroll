@@ -200,6 +200,19 @@ void main() {
       expect(env.transport.lastHub.calls('CancelPowerAction'), hasLength(1));
     });
 
+    testWidgets('Dado a conexão caiu no meio, Quando peço uma ação, Então aviso que não há conexão (sem travar)', (
+      tester,
+    ) async {
+      env.transport.hubResponses['PowerAction'] = (_) => failure(ErrorCodes.connectionLost);
+      await openDashboard(tester);
+
+      await tester.tap(find.byKey(const Key('power-lock')));
+      await settle(tester);
+      await confirmSheet(tester, slide: false);
+
+      expect(find.text('Sem conexão com o PC.'), findsOneWidget);
+    });
+
     testWidgets('Dado hibernação desativada, Quando o agente recusa, Então a mensagem é clara', (tester) async {
       env.transport.hubResponses['PowerAction'] = (_) => failure(ErrorCodes.powerHibernateUnavailable);
       await openDashboard(tester);
@@ -209,6 +222,65 @@ void main() {
       await confirmSheet(tester, slide: true);
 
       expect(find.text('A hibernação está desativada neste PC.'), findsOneWidget);
+    });
+  });
+
+  group('Biometria na confirmação', () {
+    /// Biometria ligada (padrão): o app abre bloqueado e é desbloqueado antes de usar o painel.
+    Future<void> openLocked(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await env.keyValues.setString('app_settings.v1', '{"biometricLock": true}');
+      env.transport.reachable('10.0.0.1', testInfo(permissions: adminPermissions));
+      env.transport.hubResponses['SubscribeDashboard'] = (_) => snapshot(1, [pcCard(), powerCard()]);
+      env.transport.hubResponses['PowerAction'] = (_) =>
+          ok({'action': 'shutdown', 'executesAt': '2026-10-18T12:05:00Z'});
+      await tester.pumpWidget(env.app());
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('unlock')));
+      await settle(tester);
+    }
+
+    Future<void> slideShutdown(WidgetTester tester) async {
+      await tester.tap(find.byKey(const Key('power-shutdown')));
+      await settle(tester);
+      await tester.drag(find.byKey(const Key('powerSlide')), const Offset(1000, 0));
+      await settle(tester);
+    }
+
+    testWidgets(
+      'Dado o aparelho sem biometria nem PIN, Quando confirmo Desligar, Então o pedido segue sem autenticação local',
+      (tester) async {
+        env.authenticator.available = false;
+        await openLocked(tester);
+
+        await slideShutdown(tester);
+
+        expect(powerRequests().single['localConfirmation'], isFalse);
+      },
+    );
+
+    testWidgets('Dado a biometria recusada ou cancelada, Quando confirmo Desligar, Então nada é enviado', (
+      tester,
+    ) async {
+      await openLocked(tester);
+      env.authenticator.accept = false;
+
+      await slideShutdown(tester);
+
+      expect(env.transport.lastHub.calls('PowerAction'), isEmpty);
+    });
+
+    testWidgets('Dado a biometria aceita, Quando confirmo Desligar, Então o pedido vai com a confirmação local', (
+      tester,
+    ) async {
+      await openLocked(tester);
+
+      await slideShutdown(tester);
+
+      expect(powerRequests().single['localConfirmation'], isTrue);
     });
   });
 }

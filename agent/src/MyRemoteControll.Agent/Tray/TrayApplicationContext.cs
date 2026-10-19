@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
 using Microsoft.Win32;
 using MyRemoteControll.Agent.Features.Pairing;
@@ -32,6 +33,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly ToolStripMenuItem _autostartItem;
     private readonly Dictionary<AgentStatus, Icon> _icons;
     private bool _exiting;
+    private bool _pairingHintChecked;
+    private bool _balloonOpensPairing;
     private string? _lastFaultShown;
     private PairingWindow? _pairingWindow;
 
@@ -77,6 +80,22 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
 
         _notifyIcon = new NotifyIcon { ContextMenuStrip = _menu, Visible = true };
+
+        // O clique esquerdo também abre o menu: quem clica com o esquerdo não acharia o "Parear aparelho…".
+        _notifyIcon.MouseClick += (_, e) =>
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                ShowContextMenu();
+            }
+        };
+        _notifyIcon.BalloonTipClicked += (_, _) =>
+        {
+            if (_balloonOpensPairing)
+            {
+                OpenPairingWindow();
+            }
+        };
 
         _runtime.StatusChanged += (_, _) => _ui.Post(_ => UpdateStatus(), null);
         _runtime.NoticeRaised += (_, notice) => _ui.Post(_ => ShowBalloon(notice.Title, notice.Message, ToolTipIcon.Warning), null);
@@ -144,6 +163,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
         if (status == AgentStatus.Running)
         {
             _lastFaultShown = null;
+            if (!_pairingHintChecked)
+            {
+                _pairingHintChecked = true;
+                _ = ShowPairingHintIfNoDeviceAsync();
+            }
         }
         else if (status == AgentStatus.Faulted)
         {
@@ -345,8 +369,60 @@ internal sealed class TrayApplicationContext : ApplicationContext
         Task.Run(() => _runtime.StopAsync(CancellationToken.None)).Wait(SessionEndingStopTimeout);
     }
 
-    private void ShowBalloon(string title, string text, ToolTipIcon icon) =>
+    private void ShowBalloon(string title, string text, ToolTipIcon icon, bool opensPairing = false)
+    {
+        _balloonOpensPairing = opensPairing;
         _notifyIcon.ShowBalloonTip(5000, title, text, icon);
+    }
+
+    /// <summary>
+    /// Primeira vez rodando, sem aparelho pareado: avisa onde está o ícone (o Windows 11 costuma escondê-lo sob a
+    /// seta "^") e abre o pareamento com um clique no aviso.
+    /// </summary>
+    private async Task ShowPairingHintIfNoDeviceAsync()
+    {
+        if (_runtime.Services is not { } services)
+        {
+            return;
+        }
+
+        try
+        {
+            var devices = await services.GetRequiredService<Features.Devices.DeviceManagement>()
+                .ListAsync(_lifetime.Token)
+                .ConfigureAwait(false);
+            if (devices.Any(d => !d.Revoked))
+            {
+                return;
+            }
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException)
+        {
+            return;
+        }
+
+        _ui.Post(
+            _ => ShowBalloon(
+                "MyRemoteControll pronto",
+                "Clique aqui para parear o celular. O ícone fica na bandeja (pode estar escondido na seta ^).",
+                ToolTipIcon.Info,
+                opensPairing: true),
+            null);
+    }
+
+    /// <summary>Abre o menu como o clique direito faz (com foco, para fechar ao clicar fora).</summary>
+    private void ShowContextMenu()
+    {
+        var show = typeof(NotifyIcon).GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (show is not null)
+        {
+            show.Invoke(_notifyIcon, null);
+        }
+        else
+        {
+            _menu.Show(Cursor.Position);
+        }
+    }
 
     private static string Truncate(string text) =>
         text.Length <= TooltipMaxLength ? text : string.Concat(text.AsSpan(0, TooltipMaxLength - 1), "…");

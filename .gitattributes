@@ -1,0 +1,5 @@
+# Fim de linha LF em tudo (o .editorconfig exige LF e o dotnet format confere), mesmo com core.autocrlf=true no
+# Windows. Scripts do Windows ficam com CRLF. Binários são detectados pelo text=auto.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf

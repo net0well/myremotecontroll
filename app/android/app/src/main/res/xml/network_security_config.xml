@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sem tráfego em texto puro e sem CAs instaladas pelo usuário. Os PCs pareados usam certificado autoassinado, validado
+  no app pelo pin SPKI recebido no QR (ADR-0006): esse pin só existe depois do pareamento e não cabe aqui.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

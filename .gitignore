@@ -1,0 +1,44 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+publish/
+*.binlog
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+app/build/
+app/android/key.properties
+app/android/app/google-services.json
+app/ios/Runner/GoogleService-Info.plist
+*.jks
+*.keystore
+
+# IDEs
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Segredos e dados locais (nunca versionar)
+*.pfx
+*.pem
+# Certificados de teste (autoassinados, só para os testes do app; não dão acesso a nada).
+!app/test/fixtures/*.pem
+appsettings.Local.json
+firebase-service-account*.json
+*.db
+*.db-shm
+*.db-wal
+
+# Claude Code (configurações locais)
+.claude/settings.local.json
+
+# Sistema
+Thumbs.db
+.DS_Store

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MyRemoteControll.Agent/MyRemoteControll.Agent.csproj" />
+    <Project Path="src/MyRemoteControll.Claude/MyRemoteControll.Claude.csproj" />
+    <Project Path="src/MyRemoteControll.Contracts/MyRemoteControll.Contracts.csproj" />
+    <Project Path="src/MyRemoteControll.Windows/MyRemoteControll.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MyRemoteControll.Agent.IntegrationTests/MyRemoteControll.Agent.IntegrationTests.csproj" />
+    <Project Path="tests/MyRemoteControll.Agent.Tests/MyRemoteControll.Agent.Tests.csproj" />
+  </Folder>
+</Solution>

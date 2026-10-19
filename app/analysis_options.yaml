@@ -1,0 +1,32 @@
+include: package:flutter_lints/flutter.yaml
+
+formatter:
+  page_width: 120
+
+plugins:
+  riverpod_lint: ^3.1.9
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "lib/l10n/app_localizations*.dart"
+    - build/**
+    - android/**
+    - ios/**
+  errors:
+    missing_required_param: error
+    missing_return: error
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_dynamic_calls
+    - avoid_print
+    - cancel_subscriptions
+    - close_sinks
+    - prefer_const_constructors
+    - prefer_final_locals
+    - prefer_single_quotes
+    - require_trailing_commas
+    - unawaited_futures
+    - use_super_parameters

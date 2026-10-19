@@ -1,0 +1,3 @@
+tags:
+  # Testes contra um agente real rodando no PC; desligados sem as variáveis MRC_E2E_HOST e MRC_E2E_PORT.
+  e2e:
